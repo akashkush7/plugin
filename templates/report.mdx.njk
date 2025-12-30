@@ -1,0 +1,331 @@
+import {
+  KPICard,
+  Chart,
+  MetricGrid,
+  Callout,
+  DataTable,
+} from "@aganitha/report-framework";
+
+# {{ metadata.reportTitle | default("Patent Landscape Analysis Report") }}
+
+<Callout type="info" title="Report Overview">
+This comprehensive patent landscape analysis examines **{{ stats.totalPatents | number_format }} patents** filed between **{{ stats.filingTrends.earliestYear }}-{{ stats.filingTrends.latestYear }}**. Generated on {{ metadata.generatedAt | date_format('long') }}.
+</Callout>
+
+---
+
+## Executive Summary
+
+{{ summary_md }}
+
+---
+
+## Key Metrics Dashboard
+
+<MetricGrid
+  metrics={[
+    {
+      label: "Total Patents",
+      value: {{ stats.totalPatents }},
+      color: "text-blue-500",
+      trend: "{{ stats.filingTrends.totalYears }} years"
+    },
+    {
+      label: "Filing Period",
+      value: "{{ stats.filingTrends.earliestYear }}-{{ stats.filingTrends.latestYear }}",
+      color: "text-green-500",
+      subtitle: "{{ stats.filingTrends.totalYears }} year span"
+    },
+    {
+      label: "Unique Assignees",
+      value: {{ stats.assigneeStats.totalUniqueAssignees }},
+      color: "text-purple-500",
+      subtitle: "Patent holders"
+    },
+    {
+      label: "Unique Inventors",
+      value: {{ stats.inventorStats.totalUniqueInventors }},
+      color: "text-orange-500",
+      subtitle: "Innovation contributors"
+    },
+    {
+      label: "Technology Areas",
+      value: {{ stats.technologyStats.totalUniqueCPCCodes }},
+      color: "text-pink-500",
+      subtitle: "CPC classifications"
+    },
+    {
+      label: "Avg. Citations",
+      value: {{ stats.citationStats.avgCitationsPerPatent | round(1) }},
+      color: "text-indigo-500",
+      subtitle: "Impact metric"
+    },
+  ]}
+  columns={3}
+/>
+
+---
+
+## Key Findings
+
+<Callout type="success" title="Innovation Highlights">
+
+{{ key_findings }}
+
+</Callout>
+
+---
+
+## Innovation Landscape
+
+{{ innovation_landscape }}
+
+---
+
+## Patent Filing Trends Analysis
+
+<Callout type="info" title="Temporal Distribution">
+Patent filing activity from {{ stats.filingTrends.earliestYear }} to {{ stats.filingTrends.latestYear }} showing innovation evolution over {{ stats.filingTrends.totalYears }} years.
+</Callout>
+
+{% if stats.filingTrends.byYear | length > 0 %}
+<Chart
+  type="line"
+  data={[
+    {% for year in stats.filingTrends.byYear %}
+    { name: '{{ year.year }}', value: {{ year.count }}, patents: {{ year.count }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]}
+  title="Patent Filings Over Time ({{ stats.filingTrends.earliestYear }}-{{ stats.filingTrends.latestYear }})"
+  height={400}
+  dataKey="value"
+  xAxisKey="name"
+/>
+{% else %}
+<p className="text-gray-500 italic">No filing trend data available.</p>
+{% endif %}
+
+{{ technology_trends }}
+
+---
+
+## Technology Focus Areas
+
+<Callout type="warning" title="CPC Classification Analysis">
+The most frequently occurring Cooperative Patent Classification codes reveal the dominant technology domains in this landscape.
+</Callout>
+
+### Top Technology Classifications
+
+{% if stats.technologyStats.topCPCCodes | length > 0 %}
+<DataTable
+  headers={['Rank', 'CPC Code', 'Patent Count', 'Percentage']}
+  rows={[
+    {% for cpc in stats.technologyStats.topCPCCodes | slice(0, 15) %}
+    ['{{ loop.index }}', '{{ cpc.code | replace("'", "\\'") }}', '{{ cpc.count | number_format }}', '{{ (cpc.count / stats.totalPatents * 100) | round(1) }}%']{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]}
+  striped={true}
+  hoverable={true}
+/>
+{% endif %}
+
+{% if stats.technologyStats.topCPCCodes | length >= 8 %}
+<div className="my-8">
+<Chart
+  type="bar"
+  data={[
+    {% for cpc in stats.technologyStats.topCPCCodes | slice(0, 10) %}
+    { name: '{{ cpc.code | replace("'", "\\'") }}', value: {{ cpc.count }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]}
+  title="Top 10 Technology Areas by CPC Code"
+  height={350}
+  dataKey="value"
+  xAxisKey="name"
+/>
+</div>
+{% endif %}
+
+---
+
+## Leading Patent Assignees
+
+<Callout type="success" title="Innovation Leaders">
+The top patent assignees by patent count, representing the key players in this technology landscape.
+</Callout>
+
+{% if stats.assigneeStats.topAssignees | length > 0 %}
+<Chart
+  type="bar"
+  data={[
+    {% for assignee in stats.assigneeStats.topAssignees | slice(0, 12) %}
+    { name: '{{ assignee.assignee | truncate(30) | replace("'", "\\'") }}', value: {{ assignee.count }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]}
+  title="Top 12 Assignees by Patent Count"
+  height={450}
+  dataKey="value"
+  xAxisKey="name"
+/>
+{% endif %}
+
+{{ assignee_insights }}
+
+---
+
+## Citation Impact Analysis
+
+<Callout type="info" title="Innovation Impact">
+Citation analysis reveals the most influential patents and their impact on subsequent innovations.
+</Callout>
+
+### Citation Statistics
+
+<MetricGrid
+  metrics={[
+    {
+      label: "Total Citations",
+      value: {{ stats.citationStats.totalCitations }},
+      color: "text-blue-500",
+      subtitle: "Across all patents"
+    },
+    {
+      label: "Average Citations",
+      value: {{ stats.citationStats.avgCitationsPerPatent | round(1) }},
+      color: "text-green-500",
+      subtitle: "Per patent"
+    },
+    {
+      label: "Highest Citations",
+      value: {{ stats.citationStats.maxCitations }},
+      color: "text-purple-500",
+      subtitle: "Single patent"
+    },
+  ]}
+  columns={3}
+/>
+
+### Most Influential Patents
+
+{% if stats.citationStats.mostCitedPatents | length > 0 %}
+<DataTable
+  headers={['Rank', 'Patent Number', 'Title', 'Citations']}
+  rows={[
+    {% for patent in stats.citationStats.mostCitedPatents %}
+    ['{{ loop.index }}', '{{ patent.patentNumber }}', '{{ patent.title | truncate(60) | replace("'", "\\'") }}', '{{ patent.citationCount }}']{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]}
+  striped={true}
+  hoverable={true}
+/>
+{% endif %}
+
+---
+
+## Inventor Network Analysis
+
+{{ inventor_analysis }}
+
+{% if stats.inventorStats.topInventors | length > 0 %}
+### Most Prolific Inventors
+
+<DataTable
+  headers={['Rank', 'Inventor Name', 'Patents']}
+  rows={[
+    {% for inventor in stats.inventorStats.topInventors | slice(0, 15) %}
+    ['{{ loop.index }}', '{{ inventor.name | replace("'", "\\'") }}', '{{ inventor.count }}']{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]}
+  striped={true}
+  hoverable={true}
+/>
+{% endif %}
+
+### Collaboration Metrics
+
+<MetricGrid
+  metrics={[
+    {
+      label: "Unique Inventors",
+      value: {{ stats.inventorStats.totalUniqueInventors }},
+      color: "text-blue-500",
+      subtitle: "Total contributors"
+    },
+    {
+      label: "Avg. Inventors/Patent",
+      value: {{ stats.inventorStats.avgInventorsPerPatent | round(1) }},
+      color: "text-green-500",
+      subtitle: "Team size metric"
+    },
+    {
+      label: "Multi-Inventor Patents",
+      value: "{{ (stats.inventorStats.multiInventorPatents / stats.totalPatents * 100) | round(1) }}%",
+      color: "text-purple-500",
+      subtitle: "{{ stats.inventorStats.multiInventorPatents }} patents"
+    },
+    {
+      label: "Max Team Size",
+      value: {{ stats.inventorStats.maxInventorsPerPatent }},
+      color: "text-orange-500",
+      subtitle: "Inventors on one patent"
+    },
+  ]}
+  columns={4}
+/>
+
+---
+
+## Methodology
+
+<Callout type="info" title="Analysis Methodology">
+
+This patent landscape analysis examined **{{ stats.totalPatents | number_format }} patents** from the PatentsView database. The dataset encompasses patents filed from **{{ stats.filingTrends.earliestYear }}** to **{{ stats.filingTrends.latestYear }}**, representing **{{ stats.filingTrends.totalYears }} years** of innovation activity.
+
+**Data Scope:**
+- **Assignees:** {{ stats.assigneeStats.totalUniqueAssignees | number_format }} unique patent holders
+- **Inventors:** {{ stats.inventorStats.totalUniqueInventors | number_format }} unique innovators
+- **Technology Areas:** {{ stats.technologyStats.totalUniqueCPCCodes | number_format }} CPC classifications
+- **Temporal Span:** {{ stats.filingTrends.totalYears }}-year period
+- **Citation Impact:** {{ stats.citationStats.totalCitations | number_format }} total citations analyzed
+
+**Analysis Framework:**
+- Filing trend analysis and temporal patterns
+- Technology classification (CPC) distribution
+- Assignee competitive intelligence
+- Inventor network and collaboration analysis
+- Citation impact assessment
+- Innovation landscape synthesis
+
+</Callout>
+
+---
+
+## Report Metadata
+
+<div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mt-8">
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <p className="text-sm text-gray-600 font-semibold">Generated</p>
+      <p className="text-gray-900">{{ metadata.generatedAt | date_format('long') }}</p>
+    </div>
+    <div>
+      <p className="text-sm text-gray-600 font-semibold">Data Source</p>
+      <p className="text-gray-900">{{ metadata.source }}</p>
+    </div>
+    <div>
+      <p className="text-sm text-gray-600 font-semibold">Report Type</p>
+      <p className="text-gray-900">Patent Landscape Analysis</p>
+    </div>
+    <div>
+      <p className="text-sm text-gray-600 font-semibold">Framework</p>
+      <p className="text-gray-900">{{ metadata.pluginId }} v{{ metadata.pluginVersion }}</p>
+    </div>
+  </div>
+</div>
+
+---
+
+<Callout type="success" title="End of Report">
+This patent landscape report was automatically generated using AI-assisted analysis with the Report Framework.
+</Callout>
